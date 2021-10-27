@@ -5,8 +5,10 @@ import dotenv from 'dotenv'
 dotenv.config()
 import cors from 'cors'
 import path from 'path'
+import { body, validationResult } from 'express-validator'
 const app = express()
 app.use(express.json())
+app.use(express.urlencoded({ extended: false }))
 const PORT = process.env.PORT || 3000
 const corsOptions = {
     credentials: true, origin:(origin, callback) => {
@@ -26,32 +28,34 @@ app.use((req, res, next) => {
       res.status(200).send({ success: true })
     } else next()
 })
-app.use(express.static(path.join(__dirname, './views')))
-
-
-
+app.use(express.static(path.join(__dirname, 'views')))
+ 
 // Routing
 
 app.get('/', (req, res) => {
-    res.send("Welcome Page!")
+    res.sendFile(path.join(__dirname, '/views/index.html'))
 })
 
+app.get('/getrecords', (req, res) => {
+    res.sendFile(path.join(__dirname, '/views/records.html'))
+})
 
+app.post('/getrecords', (req, res) => {
+    let { StartDate, EndDate, MinCount, MaxCount } = req.body
 
-app.post('/getrecords', async (req, res) => {
-    let { startDate, endDate, minCount, maxCount } = req.body
+    console.log(req.body)
     
-    if(startDate === '' || endDate === '' || !minCount || !maxCount) {
-        res.statusCode(404).send({ status: 'error', msg: "Request payload missing!"})
-    }
+    // if(StartDate === '' || EndDate === '' || !MinCount || !MaxCount) {
+    //     res.status(404).send({ status: 'error', msg: "Request payload missing!"})
+    // }
     const collection = db.collection('records')
-    const recordsData = await collection.aggregate(
+    const recordsData = collection.aggregate(
         [
             {
                 $match: {
                     "createdAt": {
-                        $gte: new Date(new Date(startDate).setHours(0, 0, 0)),
-                        $lte: new Date(new Date(endDate).setHours(0, 0, 0))
+                        $gte: new Date(new Date(StartDate).setHours(0, 0, 0)),
+                        $lte: new Date(new Date(EndDate).setHours(0, 0, 0))
                     }
                 }
             },
@@ -86,7 +90,6 @@ app.post('/getrecords', async (req, res) => {
         }
     )
 })
-
 
 // Error handler - global
 app.use((error, req, res, next) => {
